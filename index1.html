@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asthma Prediction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .asthma-result {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .no-asthma-result {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .progress-container {
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .progress-bar {
+            height: 30px;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+            font-weight: bold;
+        }
+        .asthma-bar {
+            background-color: #dc3545;
+        }
+        .no-asthma-bar {
+            background-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <h1>Asthma Prediction</h1>
+    <form id="predictionForm">
+        <div class="form-group">
+            <label for="age">Age:</label>
+            <input type="number" id="age" required min="1" max="120">
+        </div>
+
+        <div class="form-group">
+            <label for="gender">Gender:</label>
+            <select id="gender" required>
+                <option value="">Select Gender</option>
+                <option value="0">Male</option>
+                <option value="1">Female</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="bmi">BMI:</label>
+            <input type="number" id="bmi" step="0.1" required>
+        </div>
+
+        <div class="form-group">
+            <label for="smoking">Smoking:</label>
+            <select id="smoking" required>
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="shortness">Shortness of Breath:</label>
+            <select id="shortness" required>
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="chest">Chest Tightness:</label>
+            <select id="chest" required>
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+            </select>
+        </div>
+
+        <button type="submit">Predict Asthma Risk</button>
+    </form>
+
+    <div id="resultContainer" class="result">
+        <h2>Prediction Results</h2>
+        <div>
+            <p>Probability of No Asthma: <span id="noAsthmaProb">0</span></p>
+            <div class="progress-container">
+                <div id="noAsthmaBar" class="progress-bar no-asthma-bar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div>
+            <p>Probability of Asthma: <span id="asthmaProb">0</span></p>
+            <div class="progress-container">
+                <div id="asthmaBar" class="progress-bar asthma-bar" style="width: 0%"></div>
+            </div>
+        </div>
+        <script src="script.js"></script>
+    </div>
+
+  <script>
+    document.getElementById('predictionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Collecting form data
+        const formData = {
+            Age: parseInt(document.getElementById('age').value),
+            Gender: parseInt(document.getElementById('gender').value),
+            BMI: parseFloat(document.getElementById('bmi').value),
+            Smoking: parseInt(document.getElementById('smoking').value),
+            ShortnessOfBreath: parseInt(document.getElementById('shortness').value),
+            ChestTightness: parseInt(document.getElementById('chest').value)
+        };
+
+        const requestData = { inputs: [formData] };
+
+        // Sending data to the server for prediction
+        fetch('http://localhost:8000/api/hfp_prediction', {  // Update endpoint to match asthma prediction API
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultContainer = document.getElementById('resultContainer');
+            resultContainer.style.display = 'block';
+
+            // Assuming data.Prediction contains an object with keys 0 and 1 for probabilities
+            const predictions = data.Prediction[0];
+            let noAsthmaProb, asthmaProb;
+
+            // Handling the prediction object format
+            if (predictions.hasOwnProperty('0') && predictions.hasOwnProperty('1')) {
+                noAsthmaProb = Math.round(predictions['0']);
+                asthmaProb = Math.round(predictions['1']);
+            } else {
+                console.error('Unexpected API response format:', data);
+                alert('Invalid prediction result format.');
+                return;
+            }
+
+            // Update the results on the page
+            document.getElementById('noAsthmaProb').textContent = noAsthmaProb + '%';
+            document.getElementById('asthmaProb').textContent = asthmaProb + '%';
+
+            // Update the progress bars
+            document.getElementById('noAsthmaBar').style.width = noAsthmaProb + '%';
+
+            document.getElementById('asthmaBar').style.width = asthmaProb + '%';
+
+        })
+    });
+</script>
+
+</body>
+</html>  
